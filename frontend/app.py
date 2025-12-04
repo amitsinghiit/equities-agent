@@ -624,13 +624,22 @@ if not df_stocks.empty:
                 match_name, match_symbol = matches[0]
                 st.success(f"Found: **{match_name}** ({match_symbol})")
                 selected_symbol = match_symbol
+                selected_name = match_name
             else:
-                st.info(f"Found {len(matches)} matching companies. Please select one:")
+                st.info(f"Found **{len(matches)}** matching companies:")
+                
+                # Display as radio buttons for better visibility
                 options = [f"{name} ({symbol})" for name, symbol in matches]
-                selected = st.selectbox("Select Company", options, key="company_selector")
-                # Extract symbol from selection
+                selected = st.radio(
+                    "Select a company to analyze:",
+                    options,
+                    key="company_selector",
+                    label_visibility="collapsed"
+                )
+                
+                # Extract symbol and name from selection
                 selected_symbol = selected.split("(")[-1].replace(")", "")
-                match_name = selected.split(" (")[0]
+                selected_name = selected.split(" (")[0]
             
             if st.button("Analyze Stock", type="primary"):
                 data = analyze_stock(selected_symbol)
