@@ -156,27 +156,69 @@ def load_stock_list():
         return pd.DataFrame()
 
 def get_symbol_from_name(query, df):
+    """
+    Multi-stage search for better accuracy:
+    1. Exact symbol match
+    2. Exact name match
+    3. Starts-with match (symbol or name)
+    4. Contains match (substring in name)
+    5. Fuzzy match (last resort)
+    """
     if df.empty: return None, None
+    
     name_map = dict(zip(df['NAME OF COMPANY'], df['SYMBOL']))
     symbol_map = dict(zip(df['SYMBOL'], df['NAME OF COMPANY']))
     
-    query_upper = query.upper().strip()
-    if query_upper in symbol_map: return symbol_map[query_upper], query_upper
+    query_clean = query.strip()
+    query_upper = query_clean.upper()
+    query_lower = query_clean.lower()
     
+    # Stage 1: Exact symbol match (case-insensitive)
+    if query_upper in symbol_map:
+        return symbol_map[query_upper], query_upper
+    
+    # Stage 2: Exact name match (case-insensitive)
     for name in name_map:
-        if name.upper().startswith(query_upper): return name, name_map[name]
-
-    names = list(name_map.keys())
-    best_match_name, score_name = process.extractOne(query, names)
+        if name.upper() == query_upper:
+            return name, name_map[name]
     
+    # Stage 3: Starts-with match for symbols
+    for symbol in symbol_map:
+        if symbol.startswith(query_upper):
+            return symbol_map[symbol], symbol
+    
+    # Stage 4: Starts-with match for names
+    for name in name_map:
+        if name.upper().startswith(query_upper):
+            return name, name_map[name]
+    
+    # Stage 5: Contains match (substring) for names
+    # This helps with searches like "tata" finding "Tata Motors"
+    contains_matches = []
+    for name in name_map:
+        if query_lower in name.lower():
+            contains_matches.append(name)
+    
+    if contains_matches:
+        # Return the shortest match (likely most relevant)
+        best_match = min(contains_matches, key=len)
+        return best_match, name_map[best_match]
+    
+    # Stage 6: Fuzzy match (last resort, higher threshold)
+    names = list(name_map.keys())
     symbols = list(symbol_map.keys())
+    
+    best_match_name, score_name = process.extractOne(query_clean, names)
     best_match_symbol, score_symbol = process.extractOne(query_upper, symbols)
     
+    # Use higher threshold for fuzzy matching to avoid bad matches
     if score_symbol > score_name:
-        if score_symbol > 80: return symbol_map[best_match_symbol], best_match_symbol
+        if score_symbol > 85:  # Increased from 80
+            return symbol_map[best_match_symbol], best_match_symbol
     else:
-        if score_name > 70: return best_match_name, name_map[best_match_name]
-            
+        if score_name > 75:  # Increased from 70
+            return best_match_name, name_map[best_match_name]
+    
     return None, None
 
 def analyze_stock(symbol):
