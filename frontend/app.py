@@ -155,76 +155,73 @@ def load_stock_list():
         st.error(f"Error fetching stock list: {e}")
         return pd.DataFrame()
 
-def get_symbol_from_name(query, df):
+def get_all_matches(query, df):
     """
-    Multi-stage search for better accuracy:
-    1. Exact symbol match
-    2. Exact name match
-    3. Starts-with match (symbol or name)
-    4. Word boundary match (whole words only)
-    5. Fuzzy match (last resort)
+    Returns all matching companies for a query.
+    Returns list of tuples: [(name, symbol), ...]
     """
-    if df.empty: return None, None
+    if df.empty: return []
     
     name_map = dict(zip(df['NAME OF COMPANY'], df['SYMBOL']))
     symbol_map = dict(zip(df['SYMBOL'], df['NAME OF COMPANY']))
     
     query_clean = query.strip()
     query_upper = query_clean.upper()
-    query_lower = query_clean.lower()
     
-    # Stage 1: Exact symbol match (case-insensitive)
+    matches = []
+    
+    # Stage 1: Exact symbol match
     if query_upper in symbol_map:
-        return symbol_map[query_upper], query_upper
+        return [(symbol_map[query_upper], query_upper)]
     
-    # Stage 2: Exact name match (case-insensitive)
+    # Stage 2: Exact name match
     for name in name_map:
         if name.upper() == query_upper:
-            return name, name_map[name]
+            return [(name, name_map[name])]
     
     # Stage 3: Starts-with match for symbols
     for symbol in symbol_map:
         if symbol.startswith(query_upper):
-            return symbol_map[symbol], symbol
+            matches.append((symbol_map[symbol], symbol))
+    
+    if matches:
+        return sorted(matches, key=lambda x: len(x[0]))  # Sort by name length
     
     # Stage 4: Starts-with match for names
     for name in name_map:
         if name.upper().startswith(query_upper):
-            return name, name_map[name]
+            matches.append((name, name_map[name]))
+    
+    if matches:
+        return sorted(matches, key=lambda x: len(x[0]))
     
     # Stage 5: Word boundary match (whole words only, min 3 chars)
-    # This prevents "NSDL" from matching "NDL" in "Nandan Denim Limited"
     if len(query_clean) >= 3:
-        word_matches = []
         for name in name_map:
-            # Split name into words and check if query matches any whole word
             words = name.upper().split()
             for word in words:
                 if word.startswith(query_upper):
-                    word_matches.append(name)
+                    matches.append((name, name_map[name]))
                     break
         
-        if word_matches:
-            # Return the shortest match (likely most relevant)
-            best_match = min(word_matches, key=len)
-            return best_match, name_map[best_match]
+        if matches:
+            return sorted(matches, key=lambda x: len(x[0]))
     
-    # Stage 6: Fuzzy match (last resort, higher threshold)
+    # Stage 6: Fuzzy match (last resort)
     names = list(name_map.keys())
     symbols = list(symbol_map.keys())
     
     best_match_name, score_name = process.extractOne(query_clean, names)
     best_match_symbol, score_symbol = process.extractOne(query_upper, symbols)
     
-    # Use higher threshold for fuzzy matching to avoid bad matches
     if score_symbol > score_name:
-        if score_symbol > 85:  # Increased from 80
-            return symbol_map[best_match_symbol], best_match_symbol
+        if score_symbol > 85:
+            return [(symbol_map[best_match_symbol], best_match_symbol)]
     else:
-        if score_name > 80:  # Increased from 75 to be more strict
-            return best_match_name, name_map[best_match_name]
+        if score_name > 80:
+            return [(best_match_name, name_map[best_match_name])]
     
-    return None, None
+    return []
 
 def analyze_stock(symbol):
     try:
@@ -620,17 +617,27 @@ if not df_stocks.empty:
         query = st.text_input("Company Name", placeholder="e.g., Reliance, Tata Motors, Infosys")
     
     if query:
-        match_name, match_symbol = get_symbol_from_name(query, df_stocks)
+        matches = get_all_matches(query, df_stocks)
         
-        if match_name:
-            st.success(f"Found: **{match_name}** ({match_symbol})")
+        if matches:
+            if len(matches) == 1:
+                match_name, match_symbol = matches[0]
+                st.success(f"Found: **{match_name}** ({match_symbol})")
+                selected_symbol = match_symbol
+            else:
+                st.info(f"Found {len(matches)} matching companies. Please select one:")
+                options = [f"{name} ({symbol})" for name, symbol in matches]
+                selected = st.selectbox("Select Company", options, key="company_selector")
+                # Extract symbol from selection
+                selected_symbol = selected.split("(")[-1].replace(")", "")
+                match_name = selected.split(" (")[0]
             
             if st.button("Analyze Stock", type="primary"):
-                data = analyze_stock(match_symbol)
+                data = analyze_stock(selected_symbol)
                 
                 if data:
                     st.divider()
-                    render_header(data, match_symbol)
+                    render_header(data, selected_symbol)
                     render_score_cards(data)
                     render_rationale(data)
                     st.markdown("---")
