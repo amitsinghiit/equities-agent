@@ -394,11 +394,11 @@ def render_shareholding(data):
                 <div class="progress-bar" style="width: {diis}%; background-color: #22c55e;"></div>
                 <div class="progress-bar" style="width: {public}%; background-color: #f59e0b;"></div>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 20px;">
-                <span style="color: #3b82f6;">● Promoters {promoters}%</span>
-                <span style="color: #0ea5e9;">● FIIs {fiis}%</span>
-                <span style="color: #22c55e;">● DIIs {diis}%</span>
-                <span style="color: #f59e0b;">● Public {public}%</span>
+            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center;"><span style="width: 10px; height: 10px; background-color: #3b82f6; border-radius: 50%; margin-right: 5px;"></span> Promoters {promoters}%</div>
+                <div style="display: flex; align-items: center;"><span style="width: 10px; height: 10px; background-color: #0ea5e9; border-radius: 50%; margin-right: 5px;"></span> FIIs {fiis}%</div>
+                <div style="display: flex; align-items: center;"><span style="width: 10px; height: 10px; background-color: #22c55e; border-radius: 50%; margin-right: 5px;"></span> DIIs {diis}%</div>
+                <div style="display: flex; align-items: center;"><span style="width: 10px; height: 10px; background-color: #f59e0b; border-radius: 50%; margin-right: 5px;"></span> Public {public}%</div>
             </div>
             """, unsafe_allow_html=True)
             
