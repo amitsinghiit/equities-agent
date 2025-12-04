@@ -217,19 +217,20 @@ def render_score_cards(data):
     score = summary.get('score', 0)
     verdict = summary.get('verdict', 'Neutral')
     tech_score = summary.get('technical_score', 0)
+    fund_score = summary.get('fundamental_score', 0)
     
     verdict_color = "#facc15" # Yellow
     if verdict in ["Must Buy", "Should Buy"]: verdict_color = "#4ade80" # Green
     elif verdict == "Not a Buy": verdict_color = "#f87171" # Red
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.markdown(f"""
         <div class="custom-card score-card">
             <div class="metric-label">Overall Score</div>
             <div class="metric-value" style="color: #60a5fa;">{score}/10</div>
-            <div style="font-size: 0.8rem; color: #64748b;">Based on technicals & fundamentals</div>
+            <div style="font-size: 0.8rem; color: #64748b;">Based on 12 factors</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -238,7 +239,7 @@ def render_score_cards(data):
         <div class="custom-card score-card">
             <div class="metric-label">Verdict</div>
             <div class="metric-value" style="color: {verdict_color};">{verdict}</div>
-            <div style="font-size: 0.8rem; color: #64748b;">AI Recommendation</div>
+            <div style="font-size: 0.8rem; color: #64748b;">Hold position recommended</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -247,7 +248,16 @@ def render_score_cards(data):
         <div class="custom-card score-card">
             <div class="metric-label">Technical Score</div>
             <div class="metric-value" style="color: #f87171;">{tech_score}/5</div>
-            <div style="font-size: 0.8rem; color: #64748b;">Short-term momentum</div>
+            <div style="font-size: 0.8rem; color: #64748b;">Bearish indications active</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col4:
+        st.markdown(f"""
+        <div class="custom-card score-card">
+            <div class="metric-label">Fundamental Score</div>
+            <div class="metric-value" style="color: #4ade80;">{fund_score}/5</div>
+            <div style="font-size: 0.8rem; color: #64748b;">Strong fundamentals</div>
         </div>
         """, unsafe_allow_html=True)
 
