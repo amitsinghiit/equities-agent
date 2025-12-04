@@ -311,27 +311,44 @@ def render_growth_metrics(data):
     screener = data.get("screener_metrics", {})
     st.markdown("### Growth Metrics (Consolidated)")
     
-    # Prepare data for the table
-    periods = ["10 Years", "5 Years", "3 Years", "TTM"]
-    
     sales = screener.get('compounded_sales_growth', {})
     profit = screener.get('compounded_profit_growth', {})
     cagr = screener.get('stock_price_cagr', {})
     roe = screener.get('return_on_equity', {})
     
-    table_data = []
-    for p in periods:
-        row = {
-            "PERIOD": p,
-            "SALES GROWTH": sales.get(p, "N/A"),
-            "PROFIT GROWTH": profit.get(p, "N/A"),
-            "STOCK CAGR": cagr.get(p, "N/A"),
-            "ROE": roe.get(p, "N/A")
-        }
-        table_data.append(row)
-        
-    df = pd.DataFrame(table_data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown("**Compounded Sales Growth**")
+        if sales:
+            df = pd.DataFrame(list(sales.items()), columns=["Period", "Growth %"])
+            st.dataframe(df, hide_index=True, use_container_width=True)
+        else:
+            st.info("N/A")
+
+    with col2:
+        st.markdown("**Compounded Profit Growth**")
+        if profit:
+            df = pd.DataFrame(list(profit.items()), columns=["Period", "Growth %"])
+            st.dataframe(df, hide_index=True, use_container_width=True)
+        else:
+            st.info("N/A")
+
+    with col3:
+        st.markdown("**Stock Price CAGR**")
+        if cagr:
+            df = pd.DataFrame(list(cagr.items()), columns=["Period", "CAGR %"])
+            st.dataframe(df, hide_index=True, use_container_width=True)
+        else:
+            st.info("N/A")
+
+    with col4:
+        st.markdown("**Return on Equity**")
+        if roe:
+            df = pd.DataFrame(list(roe.items()), columns=["Period", "ROE %"])
+            st.dataframe(df, hide_index=True, use_container_width=True)
+        else:
+            st.info("N/A")
 
 def render_shareholding(data):
     screener = data.get("screener_metrics", {})
