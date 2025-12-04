@@ -161,7 +161,7 @@ def get_symbol_from_name(query, df):
     1. Exact symbol match
     2. Exact name match
     3. Starts-with match (symbol or name)
-    4. Contains match (substring in name)
+    4. Word boundary match (whole words only)
     5. Fuzzy match (last resort)
     """
     if df.empty: return None, None
@@ -192,17 +192,22 @@ def get_symbol_from_name(query, df):
         if name.upper().startswith(query_upper):
             return name, name_map[name]
     
-    # Stage 5: Contains match (substring) for names
-    # This helps with searches like "tata" finding "Tata Motors"
-    contains_matches = []
-    for name in name_map:
-        if query_lower in name.lower():
-            contains_matches.append(name)
-    
-    if contains_matches:
-        # Return the shortest match (likely most relevant)
-        best_match = min(contains_matches, key=len)
-        return best_match, name_map[best_match]
+    # Stage 5: Word boundary match (whole words only, min 3 chars)
+    # This prevents "NSDL" from matching "NDL" in "Nandan Denim Limited"
+    if len(query_clean) >= 3:
+        word_matches = []
+        for name in name_map:
+            # Split name into words and check if query matches any whole word
+            words = name.upper().split()
+            for word in words:
+                if word.startswith(query_upper):
+                    word_matches.append(name)
+                    break
+        
+        if word_matches:
+            # Return the shortest match (likely most relevant)
+            best_match = min(word_matches, key=len)
+            return best_match, name_map[best_match]
     
     # Stage 6: Fuzzy match (last resort, higher threshold)
     names = list(name_map.keys())
@@ -216,7 +221,7 @@ def get_symbol_from_name(query, df):
         if score_symbol > 85:  # Increased from 80
             return symbol_map[best_match_symbol], best_match_symbol
     else:
-        if score_name > 75:  # Increased from 70
+        if score_name > 80:  # Increased from 75 to be more strict
             return best_match_name, name_map[best_match_name]
     
     return None, None
