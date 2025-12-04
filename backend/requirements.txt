@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+yfinance
+pandas
+pandas-ta-classic
+numpy
+requests
+beautifulsoup4
+google-generativeai
+anthropic
