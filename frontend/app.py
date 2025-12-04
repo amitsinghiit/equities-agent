@@ -402,6 +402,51 @@ def render_shareholding(data):
             </div>
             """, unsafe_allow_html=True)
             
+            # QoQ Metrics with deltas
+            try:
+                promoters_prev = float(shp_data.get('Promoters', ['0', '0'])[-2].replace('%', ''))
+                fiis_prev = float(shp_data.get('FIIs', ['0', '0'])[-2].replace('%', ''))
+                diis_prev = float(shp_data.get('DIIs', ['0', '0'])[-2].replace('%', ''))
+                public_prev = float(shp_data.get('Public', ['0', '0'])[-2].replace('%', ''))
+                
+                promoters_delta = promoters - promoters_prev
+                fiis_delta = fiis - fiis_prev
+                diis_delta = diis - diis_prev
+                public_delta = public - public_prev
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    delta_color = "normal"
+                    sign_text = "Positive Sign" if promoters_delta > 0 else "Negative Sign" if promoters_delta < 0 else "Neutral"
+                    sign_color = "green" if promoters_delta > 0 else "red" if promoters_delta < 0 else "gray"
+                    st.metric("Promoters", f"{promoters:.2f}%", f"{promoters_delta:+.2f}%", delta_color=delta_color)
+                    st.markdown(f"<p style='color:{sign_color}; font-size: 0.8rem; margin-top: -10px;'>{sign_text}</p>", unsafe_allow_html=True)
+                
+                with col2:
+                    delta_color = "normal"
+                    sign_text = "Positive Sign" if fiis_delta > 0 else "Negative Sign" if fiis_delta < 0 else "Neutral"
+                    sign_color = "green" if fiis_delta > 0 else "red" if fiis_delta < 0 else "gray"
+                    st.metric("FIIs", f"{fiis:.2f}%", f"{fiis_delta:+.2f}%", delta_color=delta_color)
+                    st.markdown(f"<p style='color:{sign_color}; font-size: 0.8rem; margin-top: -10px;'>{sign_text}</p>", unsafe_allow_html=True)
+                
+                with col3:
+                    delta_color = "normal"
+                    sign_text = "Positive Sign" if diis_delta > 0 else "Negative Sign" if diis_delta < 0 else "Neutral"
+                    sign_color = "green" if diis_delta > 0 else "red" if diis_delta < 0 else "gray"
+                    st.metric("DIIs", f"{diis:.2f}%", f"{diis_delta:+.2f}%", delta_color=delta_color)
+                    st.markdown(f"<p style='color:{sign_color}; font-size: 0.8rem; margin-top: -10px;'>{sign_text}</p>", unsafe_allow_html=True)
+                
+                with col4:
+                    delta_color = "inverse"
+                    sign_text = "Positive Sign" if public_delta < 0 else "Negative Sign" if public_delta > 0 else "Neutral"
+                    sign_color = "green" if public_delta < 0 else "red" if public_delta > 0 else "gray"
+                    st.metric("Public", f"{public:.2f}%", f"{public_delta:+.2f}%", delta_color=delta_color)
+                    st.markdown(f"<p style='color:{sign_color}; font-size: 0.8rem; margin-top: -10px;'>{sign_text}</p>", unsafe_allow_html=True)
+                    
+            except:
+                pass
+            
         except:
             pass
 
@@ -410,19 +455,24 @@ def render_fundamentals(data):
     top_ratios = screener.get('top_ratios', {})
     
     st.markdown("### Fundamental Data (Consolidated)")
+    st.markdown("<p style='color:#94a3b8; font-size: 0.9rem;'>Key Metrics (Current/TTM)</p>", unsafe_allow_html=True)
     
     if top_ratios:
-        cols = st.columns(5)
         metrics = list(top_ratios.items())
         
-        for i, (label, val) in enumerate(metrics):
-            with cols[i % 5]:
-                st.markdown(f"""
-                <div class="custom-card" style="padding: 15px; min-height: 100px;">
-                    <div class="metric-label">{label}</div>
-                    <div style="font-size: 1.1rem; font-weight: 600; color: #f8fafc;">{val}</div>
-                </div>
-                """, unsafe_allow_html=True)
+        # Display in rows of 4
+        for i in range(0, len(metrics), 4):
+            cols = st.columns(4)
+            row_metrics = metrics[i:i+4]
+            
+            for j, (label, val) in enumerate(row_metrics):
+                with cols[j]:
+                    st.markdown(f"""
+                    <div class="custom-card" style="padding: 15px; min-height: 100px;">
+                        <div class="metric-label">{label}</div>
+                        <div style="font-size: 1.1rem; font-weight: 600; color: #f8fafc;">{val}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
 def render_concall(data):
     concall = data.get("concall_analysis", {})
