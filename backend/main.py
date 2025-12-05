@@ -125,8 +125,13 @@ def analyze_stock(symbol: str, period: str = "max"):
         "screener_metrics": screener_data,
         "concall_analysis": concall_analysis,
         "llm_comparison": llm_comparison,
-        "scoring_breakdown": scoring_result
+        "scoring_breakdown": score_result
     }
+    
+    # Store in cache
+    analysis_cache[cache_key] = result
+    
+    return result
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
