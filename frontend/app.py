@@ -226,10 +226,60 @@ def get_all_matches(query, df):
 def analyze_stock(symbol):
     try:
         api_symbol = f"{symbol}.NS" if not symbol.endswith((".NS", ".BO")) else symbol
-        with st.spinner(f"Analyzing {api_symbol}..."):
+        
+        # Custom CSS for the loader
+        st.markdown("""
+        <style>
+        .loader-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #3b82f6;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loader-text {
+            margin-top: 20px;
+            color: #94a3b8;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        # Use st.status for a better loading experience
+        with st.status(f"🚀 Analyzing {api_symbol}...", expanded=True) as status:
+            st.markdown("""
+                <div class="loader-container">
+                    <div class="loader"></div>
+                    <div class="loader-text">
+                        Gathering market data, analyzing technicals, reading concalls,<br>
+                        and consulting AI models (Gemini & Claude)...
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Make the API call
             response = requests.get(f"{BACKEND_URL}/analyze/{api_symbol}")
             response.raise_for_status()
+            
+            status.update(label="Analysis Complete!", state="complete", expanded=False)
             return response.json()
+            
     except Exception as e:
         st.error(f"Error communicating with backend: {e}")
         return None
