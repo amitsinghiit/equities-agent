@@ -4,6 +4,8 @@ from typing import Optional, Dict, Any
 import uvicorn
 import pandas as pd
 import json
+from cachetools import TTLCache
+from datetime import datetime
 
 # Import our engines
 from data_engine import get_stock_data
@@ -15,6 +17,9 @@ from concall_analyzer import get_concall_analysis
 from llm_engine import get_llm_comparison
 
 app = FastAPI(title="Indian Equities Analysis Agent")
+
+# Cache with 1 hour TTL (3600 seconds), max 100 entries
+analysis_cache = TTLCache(maxsize=100, ttl=3600)
 
 class AnalysisRequest(BaseModel):
     symbol: str
@@ -29,6 +34,14 @@ def analyze_stock(symbol: str, period: str = "max"):
     """
     Full analysis endpoint: Data + Technicals + Fundamentals
     """
+    # Check cache first
+    cache_key = f"{symbol}_{period}"
+    if cache_key in analysis_cache:
+        print(f"Cache hit for {symbol}")
+        return analysis_cache[cache_key]
+    
+    print(f"Cache miss for {symbol}, fetching fresh data...")
+    
     # 1. Fetch Data
     try:
         data = get_stock_data(symbol, period)
@@ -74,32 +87,36 @@ def analyze_stock(symbol: str, period: str = "max"):
     try:
         concall_analysis = get_concall_analysis(symbol)
     except Exception as e:
-        concall_analysis = {"error": str(e), "status": "error"}
+        concall_analysis = {"status": "error", "error": str(e)}
 
-    # 6. Get LLM Comparison (Gemini vs Claude)
+    # 6. Get LLM comparison (Gemini vs Claude)
     try:
         llm_comparison = get_llm_comparison(symbol, latest_tech, {"metrics": fund_metrics}, screener_data, concall_analysis)
     except Exception as e:
         llm_comparison = {"error": str(e)}
 
-    # 7. Calculate Score and Verdict (Rule-based)
-    scoring_result = calculate_score(latest_tech, {
-        "metrics": fund_metrics,
-        "analysis": fund_analysis
-    }, screener_data)
-    
-    summary = {
-        "symbol": symbol.upper(),
-        "price": latest_tech.get("Close"),
-        "score": scoring_result["score"],
-        "verdict": scoring_result["verdict"],
-        "technical_score": scoring_result["technical_score"],
-        "fundamental_score": scoring_result["fundamental_score"],
-        "timestamp": latest_tech.get("Date") or latest_tech.get("name")
-    }
+    # 7. Calculate overall score
+    try:
+        score_result = calculate_score(latest_tech, {
+            "metrics": fund_metrics,
+            "analysis": fund_analysis
+        }, screener_data)
+    except Exception as e:
+        score_result = {"error": str(e)}
 
-    return {
-        "summary": summary,
+    # Build response
+    result = {
+        "symbol": symbol.upper(),
+        "timestamp": datetime.now().isoformat(),
+        "summary": {
+            "symbol": symbol.upper(),
+            "price": latest_tech.get("Close"),
+            "score": score_result.get("score"),
+            "verdict": score_result.get("verdict"),
+            "technical_score": score_result.get("technical_score"),
+            "fundamental_score": score_result.get("fundamental_score"),
+            "timestamp": latest_tech.get("Date") or latest_tech.get("name")
+        },
         "technicals": latest_tech,
         "fundamentals": {
             "metrics": fund_metrics,
