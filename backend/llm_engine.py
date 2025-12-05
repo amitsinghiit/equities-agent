@@ -42,17 +42,27 @@ You are an expert financial analyst. Analyze the following data for {symbol} and
 
 ---
 
-Based on ALL the above data, please provide a JSON response with the following fields:
+### CRITICAL ANALYSIS FACTORS:
+You MUST evaluate the company based on the following 5 specific factors:
+1. **Sales & Profit Growth/Degrowth**: Analyze the historical growth trends (CAGR) and recent quarterly performance.
+2. **Institutional Holding (FII/DII)**: Check for recent changes in FII/DII ownership. Increasing holding is positive, decreasing is negative.
+3. **Management Projections**: Evaluate future guidance and outlook provided in the concall summary.
+4. **Geo-Politics**: Use your knowledge to assess any geo-political risks or opportunities relevant to this specific sector.
+5. **Regulatory Impact**: Consider any recent or upcoming government regulations that could impact this company or sector.
+
+---
+
+Based on ALL the above data and factors, please provide a JSON response with the following fields:
 1. "verdict": One of ["Must Buy", "Buy", "Hold", "Sell", "Avoid"]
 2. "score": A score from 0 to 10 (10 being the best investment opportunity)
-3. "summary": A concise 3-4 sentence interpretation of the company's outlook, citing specific reasons from the data (technicals, fundamentals, or concall).
+3. "summary": A concise 3-4 sentence interpretation. You MUST explicitly mention the key drivers from the 5 factors above (e.g., "Despite strong growth, regulatory headwinds...")
 
 **IMPORTANT**: Return ONLY the JSON object. Do not include markdown formatting like ```json ... ```.
 Example format:
 {{
   "verdict": "Buy",
   "score": 7.5,
-  "summary": "The company shows strong fundamental growth with 20% revenue increase. Technicals are bullish with RSI at 45. Concall indicates positive future guidance."
+  "summary": "The company shows strong 20% profit growth and increasing FII interest. Management projects double-digit growth, though geo-political tensions in Europe pose a slight risk to exports."
 }}
 """
     return prompt
