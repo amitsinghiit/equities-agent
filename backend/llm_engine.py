@@ -67,57 +67,96 @@ Example format:
 """
     return prompt
 
+import time
+import random
+
 def analyze_with_gemini(prompt: str) -> Dict[str, Any]:
     """
-    Analyze stock data using Gemini.
+    Analyze stock data using Gemini with retry logic for rate limits.
     """
     if not GEMINI_API_KEY:
         return {"error": "Gemini API Key not set"}
         
-    try:
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        response = model.generate_content(prompt)
-        
-        # Clean response to ensure valid JSON
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.endswith("```"):
-            text = text[:-3]
+    model = genai.GenerativeModel('gemini-2.0-flash')
+    
+    max_retries = 3
+    base_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            response = model.generate_content(prompt)
             
-        return json.loads(text)
-    except Exception as e:
-        return {"error": f"Gemini Analysis Failed: {str(e)}"}
+            # Clean response to ensure valid JSON
+            text = response.text.strip()
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.endswith("```"):
+                text = text[:-3]
+                
+            return json.loads(text)
+            
+        except Exception as e:
+            error_str = str(e)
+            # Check for rate limit errors (429)
+            if "429" in error_str or "Resource exhausted" in error_str:
+                if attempt < max_retries - 1:
+                    # Exponential backoff + jitter: 2s, 4s, 8s... + random
+                    sleep_time = (base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                    print(f"Gemini 429 error. Retrying in {sleep_time:.2f}s... (Attempt {attempt+1}/{max_retries})")
+                    time.sleep(sleep_time)
+                    continue
+            
+            # If it's not a rate limit or we ran out of retries
+            return {"error": f"Gemini Analysis Failed: {error_str}"}
+            
+    return {"error": "Gemini Analysis Failed: Max retries exceeded"}
 
 def analyze_with_claude(prompt: str) -> Dict[str, Any]:
     """
-    Analyze stock data using Claude.
+    Analyze stock data using Claude with retry logic.
     """
     if not ANTHROPIC_API_KEY:
         return {"error": "Anthropic API Key not set"}
         
-    try:
-        client = Anthropic(api_key=ANTHROPIC_API_KEY)
-        message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=1000,
-            temperature=0,
-            system="You are a financial analyst assistant that outputs strict JSON.",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        
-        text = message.content[0].text.strip()
-        # Clean response
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.endswith("```"):
-            text = text[:-3]
+    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    
+    max_retries = 3
+    base_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            message = client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=1000,
+                temperature=0,
+                system="You are a financial analyst assistant that outputs strict JSON.",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
             
-        return json.loads(text)
-    except Exception as e:
-        return {"error": f"Claude Analysis Failed: {str(e)}"}
+            text = message.content[0].text.strip()
+            # Clean response
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.endswith("```"):
+                text = text[:-3]
+                
+            return json.loads(text)
+            
+        except Exception as e:
+            error_str = str(e)
+            # Check for rate limit errors (429) or overloaded (529)
+            if "429" in error_str or "529" in error_str or "Overloaded" in error_str:
+                if attempt < max_retries - 1:
+                    sleep_time = (base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                    print(f"Claude rate limit error. Retrying in {sleep_time:.2f}s... (Attempt {attempt+1}/{max_retries})")
+                    time.sleep(sleep_time)
+                    continue
+            
+            return {"error": f"Claude Analysis Failed: {error_str}"}
+            
+    return {"error": "Claude Analysis Failed: Max retries exceeded"}
 
 def get_llm_comparison(symbol: str, technicals: Dict, fundamentals: Dict, screener_data: Dict, concall_analysis: Dict) -> Dict[str, Any]:
     """
